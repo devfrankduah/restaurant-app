@@ -1,0 +1,68 @@
+import { test, expect, Page } from '@playwright/test'
+
+// Delete all dishes before running test
+async function createNewDishFn(page: Page) {
+  await page.goto('http://localhost:3000/')
+  await page.waitForURL('http://localhost:3000/')
+  await page.getByRole('link', { name: 'Add new food' }).click()
+  await page.getByRole('textbox').first().fill('rice')
+  await page.getByRole('textbox').nth(1).click()
+  await page.getByRole('textbox').nth(1).fill('sweet')
+  await page.getByRole('button', { name: 'Create' }).click()
+}
+test.only('Add new dish', async ({ page }) => {
+  await createNewDishFn(page)
+  await page.waitForSelector('.loading-view', { state: 'hidden' })
+  // await page.waitForTimeout(2000)
+  await page.goto('http://localhost:3000/dishes')
+  await page.waitForURL('http://localhost:3000/dishes')
+  await page.waitForSelector('.dish-list', { state: 'visible' })
+  const items = page.locator('.dish-list')
+  expect(await items.count()).toEqual(1)
+})
+
+test.only('Delete newly added dish', async ({ page }) => {
+  await page.goto('http://localhost:3000/')
+  await page.waitForURL('http://localhost:3000/')
+  await page.getByRole('link', { name: 'See all food' }).click()
+  await page.waitForURL('http://localhost:3000/dishes')
+  await page.waitForSelector('.dish-list', { state: 'visible' })
+  await page.getByRole('button', { name: 'Delete' }).click()
+  page.on('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button').click()
+  await page.waitForTimeout(4000)
+  const items = page.locator('.dish-list')
+  expect(await items.count()).toEqual(0)
+})
+
+test('Add new dish and update', async ({ page }) => {
+  await createNewDishFn(page)
+  await page.waitForSelector('.loading-view', { state: 'hidden' })
+  // await page.waitForSelector('.dish-list', { state: 'visible' })
+  await page.waitForTimeout(1000)
+  await page.getByText('Name: rice').first().click()
+  await page.getByRole('button', { name: 'Edit' }).click()
+  await page.getByPlaceholder('rice').fill('soup')
+  await page.getByPlaceholder('sweet').click()
+  await page.getByPlaceholder('sweet').fill('sweet is sweeter')
+  await page.getByRole('button', { name: 'Save' }).click()
+  const items = page.locator('.dish-list')
+  await page.waitForSelector('.loading-view', { state: 'hidden' })
+  await page.waitForTimeout(500)
+  const updated = page.locator('div').filter({ hasText: 'soup' }).first()
+  expect(await items.count()).toEqual(1)
+  expect(await updated.count()).toEqual(1)
+  await page.getByRole('button', { name: 'Delete' }).click()
+  page.on('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button').click()
+  await page.waitForTimeout(4000)
+})
+
+test('View dishes list', async ({ page }) => {
+  await createNewDishFn(page)
+  await page.waitForURL('http://localhost:3000/dishes')
+  await page.waitForSelector('.loading-view', { state: 'hidden' })
+  // await page.waitForSelector('.dish-list', { state: 'visible' })
+  const items = page.locator('.dish-list')
+  expect(await items.count()).toEqual(1)
+})
